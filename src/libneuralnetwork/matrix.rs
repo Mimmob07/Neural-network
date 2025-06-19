@@ -1,13 +1,14 @@
-use core::fmt;
 use rand::Rng;
-use std::ops::{Add, Mul, Sub};
+use std::{
+    fmt::Debug,
+    ops::{Add, Mul, Sub},
+};
 
-pub struct DimensionError(String);
-
+#[derive(Clone)]
 pub struct Matrix {
-    rows: usize,
-    cols: usize,
-    data: Vec<Vec<f64>>,
+    pub rows: usize,
+    pub cols: usize,
+    pub data: Vec<Vec<f64>>,
 }
 
 impl Matrix {
@@ -32,13 +33,15 @@ impl Matrix {
         Matrix { rows, cols, data }
     }
 
-    pub fn dot(self, rhs: Matrix) -> Result<Matrix, DimensionError> {
-        if self.rows != rhs.rows || self.cols != rhs.cols {
-            return Err(DimensionError(format!(
-                "Attempt to dot multiply matrix of size {}x{} with matrix of size {}x{}",
-                self.rows, self.cols, rhs.rows, rhs.cols
-            )));
-        }
+    pub fn dot(&self, rhs: &Matrix) -> Matrix {
+        assert!(
+            self.rows == rhs.rows && self.cols == rhs.cols,
+            "Attempt to dot multiply matrix of size {}x{} with matrix of size {}x{}",
+            self.rows,
+            self.cols,
+            rhs.rows,
+            rhs.cols
+        );
 
         let mut product: Matrix = Matrix::zeros(self.rows, self.cols);
 
@@ -48,10 +51,10 @@ impl Matrix {
             }
         }
 
-        Ok(product)
+        product
     }
 
-    pub fn transpose(self) -> Matrix {
+    pub fn transpose(&self) -> Matrix {
         let mut transpose: Matrix = Matrix::zeros(self.cols, self.rows);
 
         for i in 0..self.rows {
@@ -63,14 +66,16 @@ impl Matrix {
         transpose
     }
 
-    pub fn map(self, function: &dyn Fn(f64) -> f64) -> Matrix {
+    // pub fn map(self, function: Box<dyn Fn(f64) -> f64>) -> Matrix {
+    pub fn map(&self, function: impl Fn(f64) -> f64) -> Matrix {
         Matrix {
             rows: self.rows,
             cols: self.cols,
             data: self
                 .data
+                .clone()
                 .into_iter()
-                .map(|row| row.into_iter().map(function).collect())
+                .map(|row| row.into_iter().map(&function).collect())
                 .collect(),
         }
     }
@@ -86,17 +91,29 @@ impl From<Vec<Vec<f64>>> for Matrix {
     }
 }
 
-// Matrix addition
-impl Add for Matrix {
-    type Output = Result<Self, DimensionError>;
-
-    fn add(self, rhs: Matrix) -> Self::Output {
-        if self.rows != rhs.rows || self.cols != rhs.cols {
-            return Err(DimensionError(format!(
-                "Attempt to add matrix of size {}x{} with matrix of size {}x{}",
-                self.rows, self.cols, rhs.rows, rhs.cols
-            )));
+impl From<Vec<f64>> for Matrix {
+    fn from(data: Vec<f64>) -> Self {
+        Self {
+            rows: 1,
+            cols: data.len(),
+            data: vec![data],
         }
+    }
+}
+
+// Matrix addition
+impl Add<&Matrix> for Matrix {
+    type Output = Self;
+
+    fn add(self, rhs: &Matrix) -> Self::Output {
+        assert!(
+            self.rows == rhs.rows && self.cols == rhs.cols,
+            "Attempt to add matrix of size {}x{} with matrix of size {}x{}",
+            self.rows,
+            self.cols,
+            rhs.rows,
+            rhs.cols
+        );
 
         let mut sum: Matrix = Matrix::zeros(self.rows, self.cols);
 
@@ -106,21 +123,23 @@ impl Add for Matrix {
             }
         }
 
-        Ok(sum)
+        sum
     }
 }
 
 // Matrix subtraction
-impl Sub for Matrix {
-    type Output = Result<Self, DimensionError>;
+impl Sub<&Matrix> for Matrix {
+    type Output = Self;
 
-    fn sub(self, rhs: Matrix) -> Self::Output {
-        if self.rows != rhs.rows || self.cols != rhs.cols {
-            return Err(DimensionError(format!(
-                "Attempt to add matrix of size {}x{} with matrix of size {}x{}",
-                self.rows, self.cols, rhs.rows, rhs.cols
-            )));
-        }
+    fn sub(self, rhs: &Matrix) -> Self::Output {
+        assert!(
+            self.rows == rhs.rows && self.cols == rhs.cols,
+            "Attempt to subtract matrix of size {}x{} with matrix of size {}x{}",
+            self.rows,
+            self.cols,
+            rhs.rows,
+            rhs.cols
+        );
 
         let mut difference: Matrix = Matrix::zeros(self.rows, self.cols);
 
@@ -130,21 +149,23 @@ impl Sub for Matrix {
             }
         }
 
-        Ok(difference)
+        difference
     }
 }
 
 // Matrix multiplication
-impl Mul<Matrix> for Matrix {
-    type Output = Result<Self, DimensionError>;
+impl Mul<&Matrix> for Matrix {
+    type Output = Self;
 
-    fn mul(self, rhs: Self) -> Self::Output {
-        if self.cols != rhs.rows {
-            return Err(DimensionError(format!(
-                "Attempt to multiply matrix of size {}x{} with matrix of size {}x{}",
-                self.rows, self.cols, rhs.rows, rhs.cols
-            )));
-        }
+    fn mul(self, rhs: &Matrix) -> Self::Output {
+        assert!(
+            self.cols == rhs.rows,
+            "Attempt to multiply matrix of size {}x{} with matrix of size {}x{}",
+            self.rows,
+            self.cols,
+            rhs.rows,
+            rhs.cols
+        );
 
         let mut product: Matrix = Matrix::zeros(self.rows, rhs.cols);
 
@@ -160,20 +181,21 @@ impl Mul<Matrix> for Matrix {
             }
         }
 
-        Ok(product)
+        product
     }
 }
 
 // Scalar multiplication
-impl<T: AsRef<f64>> Mul<T> for Matrix {
+// impl<T: AsRef<f64>> Mul<T> for Matrix {
+impl Mul<f64> for Matrix {
     type Output = Self;
 
-    fn mul(self, rhs: T) -> Self::Output {
+    fn mul(self, rhs: f64) -> Self::Output {
         let mut product: Matrix = Matrix::zeros(self.rows, self.cols);
 
         for i in 0..self.rows {
             for j in 0..self.cols {
-                product.data[i][j] = rhs.as_ref() * self.data[i][j];
+                product.data[i][j] = rhs * self.data[i][j];
             }
         }
 
@@ -181,8 +203,12 @@ impl<T: AsRef<f64>> Mul<T> for Matrix {
     }
 }
 
-impl fmt::Display for DimensionError {
+impl Debug for Matrix {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
+        writeln!(f, "Matrix:").unwrap();
+        for i in 0..self.data.len() {
+            writeln!(f, "\t{:?}", self.data[i]).unwrap();
+        }
+        Ok(())
     }
 }
