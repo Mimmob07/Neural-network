@@ -186,7 +186,6 @@ impl Mul<&Matrix> for Matrix {
 }
 
 // Scalar multiplication
-// impl<T: AsRef<f64>> Mul<T> for Matrix {
 impl Mul<f64> for Matrix {
     type Output = Self;
 

@@ -8,5 +8,9 @@ pub struct Activation {
 pub const SIGMOID: Activation = Activation {
     function: |x| 1.0 / (1.0 + E.powf(-x)),
     derivative: |x| E.powf(-x) / (1.0 + E.powf(-x)).powi(2),
-    // derivative: |y| y * (1.0 - y),
+};
+
+pub const RELU: Activation = Activation {
+    function: |x| f64::max(0.0, x),
+    derivative: |x| ((x > 0.0) as u8).into(),
 };

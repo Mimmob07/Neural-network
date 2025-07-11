@@ -1,3 +1,5 @@
+use rand::seq::SliceRandom;
+
 use super::{activation::Activation, matrix::Matrix};
 
 pub struct Network {
@@ -31,7 +33,23 @@ impl Network {
         }
     }
 
-    pub fn feed_forward(&mut self, inputs: Vec<f64>) -> Vec<f64> {
+    pub fn feed_forward(&self, inputs: Vec<f64>) -> Vec<f64> {
+        assert!(
+            inputs.len() == self.layers[0],
+            "Number of inputs does not match number of neurons in the first layer"
+        );
+
+        let mut activation = Matrix::from(inputs).transpose();
+
+        for i in 0..self.layers.len() - 1 {
+            activation = ((self.weights[i].clone() * &activation) + &self.biases[i].clone())
+                .map(self.activation_function.function);
+        }
+
+        activation.transpose().data[0].to_owned()
+    }
+
+    fn feed_forward_and_record(&mut self, inputs: Vec<f64>) -> Vec<f64> {
         assert!(
             inputs.len() == self.layers[0],
             "Number of inputs does not match number of neurons in the first layer"
@@ -41,7 +59,6 @@ impl Network {
         self.activation_history.push(current_activation.clone());
 
         for i in 0..self.layers.len() - 1 {
-            // let z = current_activation * &self.weights[i] + &self.biases[i];
             let z = (self.weights[i].clone() * &current_activation) + &self.biases[i];
             self.z_history.push(z.clone());
 
@@ -52,8 +69,7 @@ impl Network {
         current_activation.transpose().data[0].to_owned()
     }
 
-    // No idea if this works as intended
-    pub fn back_propogate(
+    fn back_propogate(
         &self,
         outputs: Vec<f64>,
         expected_outputs: Vec<f64>,
@@ -113,10 +129,60 @@ impl Network {
                 self.z_history.clear();
                 self.activation_history.clear();
 
-                let train_outputs = self.feed_forward(training_inputs[j].clone());
+                let train_outputs = self.feed_forward_and_record(training_inputs[j].clone());
                 let (nabla_w, nabla_b) =
                     self.back_propogate(train_outputs, training_outputs[j].clone());
                 self.update_network(nabla_w, nabla_b);
+            }
+        }
+    }
+
+    pub fn stohastic_train(
+        &mut self,
+        training_inputs: Vec<Vec<f64>>,
+        training_outputs: Vec<Vec<f64>>,
+        epochs: u16,
+        mini_batch_size: usize,
+    ) {
+        let mut batch: Vec<(Vec<f64>, Vec<f64>)> =
+            training_inputs.into_iter().zip(training_outputs).collect();
+
+        for i in 1..=epochs {
+            if epochs < 100 || i % 100 == 0 {
+                println!("Epoch {i} of {epochs}");
+            }
+
+            batch.shuffle(&mut rand::rng());
+            let mini_batches = batch.windows(mini_batch_size);
+
+            for mini_batch in mini_batches {
+                // Update mini branch
+                let mut nabla_w: Vec<Matrix> = Vec::new();
+                let mut nabla_b: Vec<Matrix> = Vec::new();
+
+                self.weights
+                    .iter()
+                    .for_each(|x| nabla_w.push(Matrix::zeros(x.rows, x.cols)));
+                self.biases
+                    .iter()
+                    .for_each(|x| nabla_b.push(Matrix::zeros(x.rows, x.cols)));
+
+                for (inputs, outputs) in mini_batch.iter().cloned() {
+                    let pre_outputs = self.feed_forward_and_record(inputs);
+                    let (pre_nabla_w, pre_nabla_b) = self.back_propogate(pre_outputs, outputs);
+
+                    for j in 0..nabla_w.len() {
+                        nabla_w[j] = nabla_w[j].clone() + &pre_nabla_w[j];
+                        nabla_b[j] = nabla_b[j].clone() + &pre_nabla_b[j];
+                    }
+                }
+
+                for j in 0..self.layers.len() - 1 {
+                    self.weights[j] = self.weights[j].clone()
+                        - &(nabla_w[j].clone() * (self.learning_rate / mini_batch.len() as f64));
+                    self.biases[j] = self.biases[j].clone()
+                        - &(nabla_b[j].clone() * (self.learning_rate / mini_batch.len() as f64));
+                }
             }
         }
     }
