@@ -186,4 +186,27 @@ impl Network {
             }
         }
     }
+
+    pub fn test(&self, inputs_set: Vec<Vec<f64>>, expected_outputs_set: Vec<Vec<f64>>) -> usize {
+        let mut passes = 0;
+
+        for (inputs, expected_outputs) in inputs_set.iter().zip(expected_outputs_set) {
+            let results = self.feed_forward(inputs.clone());
+            // This is the code for a single decision test
+            // let greatest = results
+            //     .iter()
+            //     .fold(f64::NEG_INFINITY, |acc, val| val.max(acc));
+            // let clamped_results: Vec<f64> = results
+            //     .iter()
+            //     .map(|val| if val == &greatest { 1.0 } else { 0.0 })
+            //     .collect();
+            let clamped_results: Vec<f64> = results.iter().map(|val| val.round()).collect();
+
+            if clamped_results == expected_outputs {
+                passes += 1;
+            }
+        }
+
+        passes
+    }
 }

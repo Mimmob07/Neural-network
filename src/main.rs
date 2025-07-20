@@ -13,16 +13,23 @@ fn main() {
     let mut network = Network::new(vec![2, 3, 1], SIGMOID, 1.0);
     network.train(inputs.clone(), outputs.clone(), 10000);
 
-    test_network(&network);
+    println!(
+        "Score: {}/{}",
+        network.test(
+            inputs.clone(),
+            vec![vec![0.0], vec![1.0], vec![1.0], vec![0.0]]
+        ),
+        inputs.len()
+    );
 
-    network.stohastic_train(inputs, outputs, 30, 1);
+    network.stohastic_train(inputs.clone(), outputs, 30, 1);
 
-    test_network(&network);
-}
-
-fn test_network(network: &Network) {
-    println!("0, 0 -> {:?}", network.feed_forward(vec![0.0, 0.0]));
-    println!("0, 1 -> {:?}", network.feed_forward(vec![0.0, 1.0]));
-    println!("1, 0 -> {:?}", network.feed_forward(vec![1.0, 0.0]));
-    println!("1, 1 -> {:?}", network.feed_forward(vec![1.0, 1.0]));
+    println!(
+        "Score: {}/{}",
+        network.test(
+            inputs.clone(),
+            vec![vec![0.0], vec![1.0], vec![1.0], vec![0.0]]
+        ),
+        inputs.len()
+    );
 }
