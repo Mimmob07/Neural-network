@@ -121,7 +121,7 @@ impl Network {
         epochs: u16,
     ) {
         for i in 1..=epochs {
-            if epochs < 100 || i % 100 == 0 {
+            if epochs <= 100 || i % 100 == 0 {
                 println!("Epoch {i} of {epochs}");
             }
 

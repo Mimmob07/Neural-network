@@ -1,35 +1,55 @@
+use std::io;
+
 use libneuralnetwork::{activation::SIGMOID, network::Network};
+use mnist_unpacker::{unpack, MnistImages};
 
-pub mod libneuralnetwork;
+mod libneuralnetwork;
+mod mnist_unpacker;
 
-fn main() {
-    let inputs = vec![
-        vec![0.0, 0.0],
-        vec![0.0, 1.0],
-        vec![1.0, 0.0],
-        vec![1.0, 1.0],
-    ];
-    let outputs = vec![vec![0.0], vec![1.0], vec![1.0], vec![0.0]];
-    let mut network = Network::new(vec![2, 3, 1], SIGMOID, 1.0);
-    network.train(inputs.clone(), outputs.clone(), 10000);
+fn main() -> io::Result<()> {
+    let train_data: MnistImages = unpack(
+        "../mnist/train-images.idx3-ubyte",
+        "../mnist/train-labels.idx1-ubyte",
+    )?;
 
-    println!(
-        "Score: {}/{}",
-        network.test(
-            inputs.clone(),
-            vec![vec![0.0], vec![1.0], vec![1.0], vec![0.0]]
-        ),
-        inputs.len()
-    );
+    let train_images = train_data
+        .images
+        .iter()
+        .map(|vec| vec.iter().map(|val| *val as f64).collect())
+        .collect();
+    let train_labels = train_data
+        .labels
+        .iter()
+        .map(|val| {
+            let mut tmp = vec![0f64; 10];
+            tmp[*val as usize] = 1.0;
+            tmp
+        })
+        .collect();
 
-    network.stohastic_train(inputs.clone(), outputs, 30, 1);
+    let mut network = Network::new(vec![784, 16, 16, 10], SIGMOID, 1.0);
+    network.train(train_images, train_labels, 100);
 
-    println!(
-        "Score: {}/{}",
-        network.test(
-            inputs.clone(),
-            vec![vec![0.0], vec![1.0], vec![1.0], vec![0.0]]
-        ),
-        inputs.len()
-    );
+    let test_data: MnistImages = unpack(
+        "../mnist/t10k-images.idx3-ubyte",
+        "../mnist/t10k-labels.idx1-ubyte",
+    )?;
+
+    let test_images: Vec<Vec<f64>> = test_data
+        .images
+        .iter()
+        .map(|vec| vec.iter().map(|val| *val as f64).collect())
+        .collect();
+    let test_labels: Vec<Vec<f64>> = test_data
+        .labels
+        .iter()
+        .map(|val| {
+            let mut tmp = vec![0f64; 10];
+            tmp[*val as usize] = 1.0;
+            tmp
+        })
+        .collect();
+    network.test(test_images, test_labels);
+
+    Ok(())
 }
