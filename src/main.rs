@@ -27,7 +27,7 @@ fn main() -> io::Result<()> {
         })
         .collect();
 
-    let mut network = Network::new(vec![784, 16, 16, 10], SIGMOID, 1.0);
+    let mut network = Network::new(vec![784, 16, 16, 10], SIGMOID, 0.01);
     network.train(train_images, train_labels, 100);
 
     let test_data: MnistImages = unpack(
@@ -49,7 +49,7 @@ fn main() -> io::Result<()> {
             tmp
         })
         .collect();
-    network.test(test_images, test_labels);
+    println!("Score: {}/10_000", network.test(test_images, test_labels));
 
     Ok(())
 }

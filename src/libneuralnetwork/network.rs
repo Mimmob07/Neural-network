@@ -1,4 +1,6 @@
-use rand::seq::SliceRandom;
+use std::time::Instant;
+
+use rand::seq::{IndexedRandom, SliceRandom};
 
 use super::{activation::Activation, matrix::Matrix};
 
@@ -120,7 +122,9 @@ impl Network {
         training_outputs: Vec<Vec<f64>>,
         epochs: u16,
     ) {
+        let mut epoch_durations: Vec<u64> = Vec::new();
         for i in 1..=epochs {
+            let start_time = Instant::now();
             if epochs <= 100 || i % 100 == 0 {
                 println!("Epoch {i} of {epochs}");
             }
@@ -134,7 +138,18 @@ impl Network {
                     self.back_propogate(train_outputs, training_outputs[j].clone());
                 self.update_network(nabla_w, nabla_b);
             }
+
+            let elapsed_time = start_time.elapsed().as_secs();
+            if epochs <= 100 || i % 100 == 0 {
+                println!("Epoch {i} took {elapsed_time}s");
+            }
+            epoch_durations.push(elapsed_time);
         }
+
+        println!(
+            "Average time to complete one epoch {}s",
+            epoch_durations.iter().sum::<u64>() / epoch_durations.len() as u64
+        );
     }
 
     pub fn stohastic_train(

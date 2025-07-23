@@ -1,6 +1,7 @@
 use std::{
     fs::File,
     io::{self, Read, Seek, SeekFrom},
+    time::Instant,
 };
 
 pub struct MnistImages {
@@ -9,6 +10,7 @@ pub struct MnistImages {
 }
 
 pub fn unpack<T: AsRef<str>>(images_filename: T, labels_filename: T) -> io::Result<MnistImages> {
+    let start_time = Instant::now();
     let mut images_file = File::open(images_filename.as_ref())?;
     let mut labels_file = File::open(labels_filename.as_ref())?;
     let mut images_magic_number = [0u8; 4];
@@ -35,10 +37,6 @@ pub fn unpack<T: AsRef<str>>(images_filename: T, labels_filename: T) -> io::Resu
     images_file.seek(SeekFrom::Current(8))?;
 
     for i in 0..images_len {
-        if i % 1000 == 0 || i == images_len - 1 {
-            println!("Image {}/{images_len}", i + 1);
-        }
-
         let mut pixels = [0u8; 784];
         let mut label = [0u8];
         images_file.read_exact(&mut pixels)?;
@@ -48,5 +46,6 @@ pub fn unpack<T: AsRef<str>>(images_filename: T, labels_filename: T) -> io::Resu
         data.labels[i] = label[0];
     }
 
+    println!("Took {}s to load images", start_time.elapsed().as_secs());
     Ok(data)
 }
