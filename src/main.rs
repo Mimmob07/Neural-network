@@ -1,6 +1,6 @@
 use std::io;
 
-use libneuralnetwork::{activation::SIGMOID, network::Network};
+use libneuralnetwork::{activation::ActivationFunction, network::Network};
 use mnist_unpacker::{unpack, MnistImages};
 
 mod libneuralnetwork;
@@ -8,8 +8,8 @@ mod mnist_unpacker;
 
 fn main() -> io::Result<()> {
     let train_data: MnistImages = unpack(
-        "../mnist/train-images.idx3-ubyte",
-        "../mnist/train-labels.idx1-ubyte",
+        "mnist/train-images.idx3-ubyte",
+        "mnist/train-labels.idx1-ubyte",
     )?;
 
     let train_images = train_data
@@ -27,12 +27,13 @@ fn main() -> io::Result<()> {
         })
         .collect();
 
-    let mut network = Network::new(vec![784, 16, 16, 10], SIGMOID, 0.01);
-    network.train(train_images, train_labels, 100);
+    let mut network = Network::new(vec![784, 30, 10], ActivationFunction::Sigmoid, 3.0);
+    network.stochastic_train(train_images, train_labels, 30, 10);
+    // network.train(train_images, train_labels, 100);
 
     let test_data: MnistImages = unpack(
-        "../mnist/t10k-images.idx3-ubyte",
-        "../mnist/t10k-labels.idx1-ubyte",
+        "mnist/t10k-images.idx3-ubyte",
+        "mnist/t10k-labels.idx1-ubyte",
     )?;
 
     let test_images: Vec<Vec<f64>> = test_data

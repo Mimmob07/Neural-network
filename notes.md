@@ -4,7 +4,7 @@
 
 $$
 \delta^L = error \quad
-C = (a^L - y)^2 \quad
+C_x = (a^L - y)^2 \quad
 \nabla_a C = 2(a^L - y) \\
 a^L = \sigma(a^{L-1} w^L + b^L) = \sigma(z^L) \quad z^L = a^{L-1} w^L + b^L
 $$
@@ -12,7 +12,7 @@ $$
 ###### Defining and deriving error
 
 $$
-\delta^L_j = \frac{\part C}{\part z^L_j} = \frac{\part C}{\part a^L_j} \frac{\part a^L_j}{\part z^L_j} \\
+\delta^L_j \equiv \frac{\part C}{\part z^L_j} = \frac{\part C}{\part a^L_j} \frac{\part a^L_j}{\part z^L_j} \\
 \delta^L = \frac{\part C}{\part a^L} \frac{\part a^L}{\part z^L} \quad
 \frac{\part C}{\part a^L} = \nabla_a C \quad
 \frac{\part a^L}{\part z^L} = \sigma\prime(z^L)\\

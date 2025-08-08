@@ -46,6 +46,9 @@ pub fn unpack<T: AsRef<str>>(images_filename: T, labels_filename: T) -> io::Resu
         data.labels[i] = label[0];
     }
 
-    println!("Took {}s to load images", start_time.elapsed().as_secs());
+    println!(
+        "Took {}s to load images",
+        start_time.elapsed().as_millis() as f64 / 1000.0
+    );
     Ok(data)
 }

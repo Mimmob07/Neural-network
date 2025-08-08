@@ -1,10 +1,11 @@
 use rand::Rng;
+use serde::{Deserialize, Serialize};
 use std::{
     fmt::Debug,
     ops::{Add, Mul, Sub},
 };
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Matrix {
     pub rows: usize,
     pub cols: usize,
