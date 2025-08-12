@@ -9,8 +9,16 @@ use std::{
 pub struct Matrix {
     pub rows: usize,
     pub cols: usize,
-    pub data: Vec<Vec<f64>>,
+    pub data: Vec<Vec<f32>>,
 }
+
+// TODO:
+//  - Flatten Matrix.data into Vec<f64> using row major order
+// ✅ Switch from f64 to f32 for better gpu compatibility
+//  - Create opencl kernels
+//  - Implement Matrix * Matrix using kernels
+//  - Implement Matrix + Matrix using kernels
+//  - Implement Matrix - Matrix using kernels
 
 impl Matrix {
     pub fn zeros(rows: usize, cols: usize) -> Self {
@@ -26,10 +34,10 @@ impl Matrix {
         let data = (0..rows)
             .map(|_| {
                 (0..cols)
-                    .map(|_| rng.random::<f64>() * 2.0 - 1.0)
-                    .collect::<Vec<f64>>()
+                    .map(|_| rng.random::<f32>() * 2.0 - 1.0)
+                    .collect::<Vec<f32>>()
             })
-            .collect::<Vec<Vec<f64>>>();
+            .collect::<Vec<Vec<f32>>>();
 
         Matrix { rows, cols, data }
     }
@@ -68,7 +76,7 @@ impl Matrix {
     }
 
     // pub fn map(self, function: Box<dyn Fn(f64) -> f64>) -> Matrix {
-    pub fn map(&self, function: impl Fn(f64) -> f64) -> Matrix {
+    pub fn map(&self, function: impl Fn(f32) -> f32) -> Matrix {
         Matrix {
             rows: self.rows,
             cols: self.cols,
@@ -82,8 +90,8 @@ impl Matrix {
     }
 }
 
-impl From<Vec<Vec<f64>>> for Matrix {
-    fn from(data: Vec<Vec<f64>>) -> Self {
+impl From<Vec<Vec<f32>>> for Matrix {
+    fn from(data: Vec<Vec<f32>>) -> Self {
         Self {
             rows: data.len(),
             cols: data[0].len(),
@@ -92,8 +100,8 @@ impl From<Vec<Vec<f64>>> for Matrix {
     }
 }
 
-impl From<Vec<f64>> for Matrix {
-    fn from(data: Vec<f64>) -> Self {
+impl From<Vec<f32>> for Matrix {
+    fn from(data: Vec<f32>) -> Self {
         Self {
             rows: 1,
             cols: data.len(),
@@ -172,7 +180,7 @@ impl Mul<&Matrix> for Matrix {
 
         for i in 0..self.rows {
             for j in 0..rhs.cols {
-                let mut sum: f64 = 0.0;
+                let mut sum: f32 = 0.0;
 
                 for k in 0..self.cols {
                     sum += self.data[i][k] * rhs.data[k][j];
@@ -187,10 +195,10 @@ impl Mul<&Matrix> for Matrix {
 }
 
 // Scalar multiplication
-impl Mul<f64> for Matrix {
+impl Mul<f32> for Matrix {
     type Output = Self;
 
-    fn mul(self, rhs: f64) -> Self::Output {
+    fn mul(self, rhs: f32) -> Self::Output {
         let mut product: Matrix = Matrix::zeros(self.rows, self.cols);
 
         for i in 0..self.rows {

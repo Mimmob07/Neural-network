@@ -14,7 +14,7 @@ pub struct Network {
     weights: Vec<Matrix>,
     biases: Vec<Matrix>,
     activation_function: ActivationFunction,
-    learning_rate: f64,
+    learning_rate: f32,
     #[serde(skip)]
     z_history: Vec<Matrix>,
     #[serde(skip)]
@@ -26,7 +26,7 @@ impl Network {
     pub fn new(
         layers: Vec<usize>,
         activation_function: ActivationFunction,
-        learning_rate: f64,
+        learning_rate: f32,
     ) -> Network {
         let mut weights: Vec<Matrix> = Vec::new();
         let mut biases: Vec<Matrix> = Vec::new();
@@ -47,7 +47,7 @@ impl Network {
         }
     }
 
-    pub fn feed_forward(&self, inputs: Vec<f64>) -> Vec<f64> {
+    pub fn feed_forward(&self, inputs: Vec<f32>) -> Vec<f32> {
         assert!(
             inputs.len() == self.layers[0],
             "Number of inputs does not match number of neurons in the first layer"
@@ -63,7 +63,7 @@ impl Network {
         activation.transpose().data[0].to_owned()
     }
 
-    fn feed_forward_and_record(&mut self, inputs: Vec<f64>) -> Vec<f64> {
+    fn feed_forward_and_record(&mut self, inputs: Vec<f32>) -> Vec<f32> {
         assert!(
             inputs.len() == self.layers[0],
             "Number of inputs does not match number of neurons in the first layer"
@@ -85,8 +85,8 @@ impl Network {
 
     fn back_propogate(
         &self,
-        outputs: Vec<f64>,
-        expected_outputs: Vec<f64>,
+        outputs: Vec<f32>,
+        expected_outputs: Vec<f32>,
     ) -> (Vec<Matrix>, Vec<Matrix>) {
         assert!(
             expected_outputs.len() == *self.layers.last().unwrap(),
@@ -131,8 +131,8 @@ impl Network {
 
     pub fn train(
         &mut self,
-        training_inputs: Vec<Vec<f64>>,
-        training_outputs: Vec<Vec<f64>>,
+        training_inputs: Vec<Vec<f32>>,
+        training_outputs: Vec<Vec<f32>>,
         epochs: u16,
     ) {
         let mut epoch_durations: Vec<u64> = Vec::new();
@@ -167,12 +167,12 @@ impl Network {
 
     pub fn stochastic_train(
         &mut self,
-        training_inputs: Vec<Vec<f64>>,
-        training_outputs: Vec<Vec<f64>>,
+        training_inputs: Vec<Vec<f32>>,
+        training_outputs: Vec<Vec<f32>>,
         epochs: u16,
         mini_batch_size: usize,
     ) {
-        let mut training_data: Vec<(Vec<f64>, Vec<f64>)> =
+        let mut training_data: Vec<(Vec<f32>, Vec<f32>)> =
             training_inputs.into_iter().zip(training_outputs).collect();
 
         for i in 1..=epochs {
@@ -211,22 +211,22 @@ impl Network {
                 for j in 0..self.layers.len() - 1 {
                     self.weights[j] = self.weights[j].clone()
                         - &(weight_gradient[j].clone()
-                            * (self.learning_rate / mini_batch.len() as f64));
+                            * (self.learning_rate / mini_batch.len() as f32));
                     self.biases[j] = self.biases[j].clone()
                         - &(bias_gradient[j].clone()
-                            * (self.learning_rate / mini_batch.len() as f64));
+                            * (self.learning_rate / mini_batch.len() as f32));
                 }
             }
         }
     }
 
-    pub fn test(&self, inputs_set: Vec<Vec<f64>>, expected_outputs_set: Vec<Vec<f64>>) -> usize {
+    pub fn test(&self, inputs_set: Vec<Vec<f32>>, expected_outputs_set: Vec<Vec<f32>>) -> usize {
         assert!(inputs_set.len() == expected_outputs_set.len());
         let mut passes = 0;
 
         for (i, (inputs, label)) in inputs_set.iter().zip(expected_outputs_set).enumerate() {
             let results = self.feed_forward(inputs.clone());
-            let clamped_results: Vec<f64> = results.iter().map(|val| val.round()).collect();
+            let clamped_results: Vec<f32> = results.iter().map(|val| val.round()).collect();
 
             println!("Test {} of {}", i, inputs_set.len());
             println!("Results : {results:?}");

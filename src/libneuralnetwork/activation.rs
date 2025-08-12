@@ -9,14 +9,14 @@ pub enum ActivationFunction {
 }
 
 impl ActivationFunction {
-    pub fn get_function(&self) -> fn(f64) -> f64 {
+    pub fn get_function(&self) -> fn(f32) -> f32 {
         match self {
             ActivationFunction::Sigmoid => SIGMOID.function,
             ActivationFunction::Relu => RELU.function,
         }
     }
 
-    pub fn get_derivative(&self) -> fn(f64) -> f64 {
+    pub fn get_derivative(&self) -> fn(f32) -> f32 {
         match self {
             ActivationFunction::Sigmoid => SIGMOID.derivative,
             ActivationFunction::Relu => RELU.derivative,
@@ -25,16 +25,16 @@ impl ActivationFunction {
 }
 
 pub struct Activation {
-    pub function: fn(f64) -> f64,
-    pub derivative: fn(f64) -> f64,
+    pub function: fn(f32) -> f32,
+    pub derivative: fn(f32) -> f32,
 }
 
 pub const SIGMOID: Activation = Activation {
-    function: |x| 1.0 / (1.0 + E.powf(-x)),
-    derivative: |x| E.powf(-x) / (1.0 + E.powf(-x)).powi(2),
+    function: |x| 1.0 / (1.0 + E.powf(-x as f64) as f32),
+    derivative: |x| E.powf(-x as f64) as f32 / (1.0 + E.powf(-x as f64)).powi(2) as f32,
 };
 
 pub const RELU: Activation = Activation {
-    function: |x| f64::max(0.0, x),
+    function: |x| f32::max(0.0, x),
     derivative: |x| ((x > 0.0) as u8).into(),
 };
