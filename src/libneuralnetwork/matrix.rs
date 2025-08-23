@@ -1,43 +1,39 @@
+use ocl::{flags, Buffer, ProQue};
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 use std::{
     fmt::Debug,
-    ops::{Add, Mul, Sub},
+    fs,
+    ops::{Add, Index, Mul, Sub},
 };
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Matrix {
     pub rows: usize,
     pub cols: usize,
-    pub data: Vec<Vec<f32>>,
+    pub data: Vec<f32>,
 }
 
 // TODO:
-//  - Flatten Matrix.data into Vec<f64> using row major order
+// ✅ Flatten Matrix.data into Vec<f64> using row major order
 // ✅ Switch from f64 to f32 for better gpu compatibility
-//  - Create opencl kernels
+// ✅ Create opencl kernels
 //  - Implement Matrix * Matrix using kernels
-//  - Implement Matrix + Matrix using kernels
-//  - Implement Matrix - Matrix using kernels
 
 impl Matrix {
     pub fn zeros(rows: usize, cols: usize) -> Self {
         Matrix {
             rows,
             cols,
-            data: vec![vec![0.0; cols]; rows],
+            data: vec![0.0; rows * cols],
         }
     }
 
     pub fn random(rows: usize, cols: usize) -> Self {
         let mut rng = rand::rng();
-        let data = (0..rows)
-            .map(|_| {
-                (0..cols)
-                    .map(|_| rng.random::<f32>() * 2.0 - 1.0)
-                    .collect::<Vec<f32>>()
-            })
-            .collect::<Vec<Vec<f32>>>();
+        let data = (0..rows * cols)
+            .map(|_| rng.random::<f32>() * 2.0 - 1.0)
+            .collect::<Vec<f32>>();
 
         Matrix { rows, cols, data }
     }
@@ -56,7 +52,8 @@ impl Matrix {
 
         for i in 0..self.rows {
             for j in 0..self.cols {
-                product.data[i][j] = self.data[i][j] * rhs.data[i][j];
+                product.data[i * self.cols + j] =
+                    self.data[i * self.cols + j] * rhs.data[i * self.cols + j];
             }
         }
 
@@ -68,7 +65,7 @@ impl Matrix {
 
         for i in 0..self.rows {
             for j in 0..self.cols {
-                transpose.data[j][i] = self.data[i][j];
+                transpose.data[j * transpose.cols + i] = self.data[i * self.cols + j];
             }
         }
 
@@ -80,22 +77,19 @@ impl Matrix {
         Matrix {
             rows: self.rows,
             cols: self.cols,
-            data: self
-                .data
-                .clone()
-                .into_iter()
-                .map(|row| row.into_iter().map(&function).collect())
-                .collect(),
+            data: self.data.clone().into_iter().map(&function).collect(),
         }
     }
 }
 
 impl From<Vec<Vec<f32>>> for Matrix {
     fn from(data: Vec<Vec<f32>>) -> Self {
+        let flat_data = data.iter().flatten().copied().collect::<Vec<f32>>();
+
         Self {
             rows: data.len(),
             cols: data[0].len(),
-            data,
+            data: flat_data,
         }
     }
 }
@@ -105,7 +99,7 @@ impl From<Vec<f32>> for Matrix {
         Self {
             rows: 1,
             cols: data.len(),
-            data: vec![data],
+            data,
         }
     }
 }
@@ -128,7 +122,8 @@ impl Add<&Matrix> for Matrix {
 
         for i in 0..self.rows {
             for j in 0..self.cols {
-                sum.data[i][j] = self.data[i][j] + rhs.data[i][j];
+                sum.data[i * self.cols + j] =
+                    self.data[i * self.cols + j] + rhs.data[i * self.cols + j];
             }
         }
 
@@ -154,7 +149,8 @@ impl Sub<&Matrix> for Matrix {
 
         for i in 0..self.rows {
             for j in 0..self.cols {
-                difference.data[i][j] = self.data[i][j] - rhs.data[i][j];
+                difference.data[i * self.cols + j] =
+                    self.data[i * self.cols + j] - rhs.data[i * self.cols + j];
             }
         }
 
@@ -163,6 +159,7 @@ impl Sub<&Matrix> for Matrix {
 }
 
 // Matrix multiplication
+// untested
 impl Mul<&Matrix> for Matrix {
     type Output = Self;
 
@@ -177,18 +174,52 @@ impl Mul<&Matrix> for Matrix {
         );
 
         let mut product: Matrix = Matrix::zeros(self.rows, rhs.cols);
+        let src = fs::read_to_string("./kernel.cl").unwrap();
+        let pro_que = ProQue::builder()
+            .src(src)
+            .dims([self.rows, rhs.cols])
+            .build()
+            .unwrap();
 
-        for i in 0..self.rows {
-            for j in 0..rhs.cols {
-                let mut sum: f32 = 0.0;
+        let buffer_a = Buffer::<f32>::builder()
+            .queue(pro_que.queue().clone())
+            .flags(flags::MEM_READ_ONLY)
+            .len(self.data.len())
+            .copy_host_slice(&self.data)
+            .build()
+            .unwrap();
 
-                for k in 0..self.cols {
-                    sum += self.data[i][k] * rhs.data[k][j];
-                }
+        let buffer_b = Buffer::<f32>::builder()
+            .queue(pro_que.queue().clone())
+            .flags(flags::MEM_READ_ONLY)
+            .len(rhs.data.len())
+            .copy_host_slice(&rhs.data)
+            .build()
+            .unwrap();
 
-                product.data[i][j] = sum;
-            }
+        let buffer_c = Buffer::<f32>::builder()
+            .queue(pro_que.queue().clone())
+            .flags(flags::MEM_WRITE_ONLY)
+            .len(product.data.len())
+            .build()
+            .unwrap();
+
+        let kernel = pro_que
+            .kernel_builder("mat_mul")
+            .arg(&buffer_a)
+            .arg(&buffer_b)
+            .arg(&buffer_c)
+            .arg(self.rows as i32)
+            .arg(self.cols as i32)
+            .arg(rhs.cols as i32)
+            .build()
+            .unwrap();
+
+        unsafe {
+            kernel.enq().unwrap();
         }
+
+        buffer_c.read(&mut product.data).enq().unwrap();
 
         product
     }
@@ -203,11 +234,20 @@ impl Mul<f32> for Matrix {
 
         for i in 0..self.rows {
             for j in 0..self.cols {
-                product.data[i][j] = rhs * self.data[i][j];
+                product.data[i * self.cols + j] = rhs * self.data[i * self.cols + j];
             }
         }
 
         product
+    }
+}
+
+impl Index<usize> for Matrix {
+    type Output = [f32];
+
+    fn index(&self, index: usize) -> &Self::Output {
+        let linear_index = index * self.cols;
+        &self.data[linear_index..linear_index + self.cols]
     }
 }
 

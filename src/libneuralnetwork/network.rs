@@ -60,7 +60,7 @@ impl Network {
                 .map(self.activation_function.get_function());
         }
 
-        activation.transpose().data[0].to_owned()
+        activation.transpose()[0].to_owned()
     }
 
     fn feed_forward_and_record(&mut self, inputs: Vec<f32>) -> Vec<f32> {
@@ -80,7 +80,7 @@ impl Network {
             self.activation_history.push(current_activation.clone());
         }
 
-        current_activation.transpose().data[0].to_owned()
+        current_activation.transpose()[0].to_owned()
     }
 
     fn back_propogate(

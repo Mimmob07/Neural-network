@@ -28,8 +28,8 @@ fn main() -> io::Result<()> {
         .collect();
 
     let mut network = Network::new(vec![784, 30, 10], ActivationFunction::Sigmoid, 3.0);
-    network.stochastic_train(train_images, train_labels, 30, 10);
-    // network.train(train_images, train_labels, 100);
+    // network.stochastic_train(train_images, train_labels, 30, 10);
+    network.train(train_images, train_labels, 100);
 
     let test_data: MnistImages = unpack(
         "mnist/t10k-images.idx3-ubyte",
@@ -51,6 +51,8 @@ fn main() -> io::Result<()> {
         })
         .collect();
     println!("Score: {}/10_000", network.test(test_images, test_labels));
+
+    network.save("mnist_100_epochs")?;
 
     Ok(())
 }
