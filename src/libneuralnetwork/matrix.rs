@@ -174,7 +174,7 @@ impl Mul<&Matrix> for Matrix {
         );
 
         let mut product: Matrix = Matrix::zeros(self.rows, rhs.cols);
-        let src = fs::read_to_string("./kernel.cl").unwrap();
+        let src = fs::read_to_string("src/libneuralnetwork/kernel.cl").unwrap();
         let pro_que = ProQue::builder()
             .src(src)
             .dims([self.rows, rhs.cols])
