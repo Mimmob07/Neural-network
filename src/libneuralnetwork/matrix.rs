@@ -1,4 +1,5 @@
 use rand::Rng;
+use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{
     fmt::Debug,
@@ -11,12 +12,6 @@ pub struct Matrix {
     pub cols: usize,
     pub data: Vec<f32>,
 }
-
-// TODO:
-// ✅ Flatten Matrix.data into Vec<f64> using row major order
-// ✅ Switch from f64 to f32 for better gpu compatibility
-// ✅ Create opencl kernels
-//  - Implement Matrix * Matrix using kernels
 
 impl Matrix {
     pub fn zeros(rows: usize, cols: usize) -> Self {
@@ -172,17 +167,21 @@ impl Mul<&Matrix> for Matrix {
 
         let mut product: Matrix = Matrix::zeros(self.rows, rhs.cols);
 
-        for i in 0..self.rows {
-            for j in 0..rhs.cols {
-                let mut sum: f32 = 0.0;
+        product
+            .data
+            .par_chunks_mut(rhs.cols)
+            .enumerate()
+            .for_each(|(i, row)| {
+                for (j, val) in row.iter_mut().enumerate() {
+                    let mut sum: f32 = 0.0;
 
-                for k in 0..self.cols {
-                    sum += self.data[i * self.cols + k] * rhs.data[k * rhs.cols + j];
+                    for k in 0..self.cols {
+                        sum += self.data[i * self.cols + k] * rhs.data[k * rhs.cols + j];
+                    }
+
+                    *val = sum;
                 }
-
-                product.data[i * rhs.cols + j] = sum;
-            }
-        }
+            });
 
         product
     }
