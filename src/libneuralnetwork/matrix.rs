@@ -1,9 +1,7 @@
-use ocl::{flags, Buffer, ProQue};
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 use std::{
     fmt::Debug,
-    fs,
     ops::{Add, Index, Mul, Sub},
 };
 
@@ -159,7 +157,6 @@ impl Sub<&Matrix> for Matrix {
 }
 
 // Matrix multiplication
-// untested
 impl Mul<&Matrix> for Matrix {
     type Output = Self;
 
@@ -174,52 +171,18 @@ impl Mul<&Matrix> for Matrix {
         );
 
         let mut product: Matrix = Matrix::zeros(self.rows, rhs.cols);
-        let src = fs::read_to_string("src/libneuralnetwork/kernel.cl").unwrap();
-        let pro_que = ProQue::builder()
-            .src(src)
-            .dims([self.rows, rhs.cols])
-            .build()
-            .unwrap();
 
-        let buffer_a = Buffer::<f32>::builder()
-            .queue(pro_que.queue().clone())
-            .flags(flags::MEM_READ_ONLY)
-            .len(self.data.len())
-            .copy_host_slice(&self.data)
-            .build()
-            .unwrap();
+        for i in 0..self.rows {
+            for j in 0..rhs.cols {
+                let mut sum: f32 = 0.0;
 
-        let buffer_b = Buffer::<f32>::builder()
-            .queue(pro_que.queue().clone())
-            .flags(flags::MEM_READ_ONLY)
-            .len(rhs.data.len())
-            .copy_host_slice(&rhs.data)
-            .build()
-            .unwrap();
+                for k in 0..self.cols {
+                    sum += self.data[i * self.cols + k] * rhs.data[k * rhs.cols + j];
+                }
 
-        let buffer_c = Buffer::<f32>::builder()
-            .queue(pro_que.queue().clone())
-            .flags(flags::MEM_WRITE_ONLY)
-            .len(product.data.len())
-            .build()
-            .unwrap();
-
-        let kernel = pro_que
-            .kernel_builder("mat_mul")
-            .arg(&buffer_a)
-            .arg(&buffer_b)
-            .arg(&buffer_c)
-            .arg(self.rows as i32)
-            .arg(self.cols as i32)
-            .arg(rhs.cols as i32)
-            .build()
-            .unwrap();
-
-        unsafe {
-            kernel.enq().unwrap();
+                product.data[i * rhs.cols + j] = sum;
+            }
         }
-
-        buffer_c.read(&mut product.data).enq().unwrap();
 
         product
     }
