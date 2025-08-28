@@ -258,7 +258,7 @@ impl Network {
         Ok(())
     }
 
-    pub fn load<T: AsRef<str>>(&self, filename: T) -> io::Result<Self> {
+    pub fn load<T: AsRef<str>>(filename: T) -> io::Result<Self> {
         let start_time = Instant::now();
         let buf = read(filename.as_ref())?;
         let network = rmp_serde::from_slice(&buf).unwrap();
