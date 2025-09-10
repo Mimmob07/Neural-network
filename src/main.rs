@@ -27,7 +27,7 @@ fn main() -> io::Result<()> {
         })
         .collect();
 
-    let mut network = Network::new(vec![784, 30, 10], ActivationFunction::Sigmoid, 3.0);
+    let mut network = Network::new(vec![784, 30, 10], ActivationFunction::Sigmoid, 0.5);
     // network.stochastic_train(train_images, train_labels, 30, 10);
     network.train(train_images, train_labels, 100);
 

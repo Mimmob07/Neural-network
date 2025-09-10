@@ -31,7 +31,8 @@ pub struct Activation {
 
 pub const SIGMOID: Activation = Activation {
     function: |x| 1.0 / (1.0 + E.powf(-x as f64) as f32),
-    derivative: |x| E.powf(-x as f64) as f32 / (1.0 + E.powf(-x as f64)).powi(2) as f32,
+    derivative: |x| (SIGMOID.function)(x) * (1.0 - (SIGMOID.function)(x)),
+    // derivative: |x| E.powf(-x as f64) as f32 / (1.0 + E.powf(-x as f64)).powi(2) as f32,
 };
 
 pub const RELU: Activation = Activation {
