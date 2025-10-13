@@ -1,6 +1,7 @@
 use rand::seq::SliceRandom;
 use serde::{Deserialize, Serialize};
 use std::{
+    f32::consts::E,
     fs::{read, File},
     io::{self, Write},
     time::Instant,
@@ -239,6 +240,17 @@ impl Network {
         }
 
         passes
+    }
+
+    fn softmax(input_layer: Vec<f32>) -> Vec<f32> {
+        let mut probabilities: Vec<f32> = Vec::new();
+        let sum: f32 = input_layer.iter().map(|x| E.powf(*x)).sum();
+
+        input_layer
+            .iter()
+            .for_each(|x| probabilities.push(E.powf(*x) / sum));
+
+        probabilities
     }
 
     pub fn save<T: AsRef<str>>(&self, filename: T) -> io::Result<()> {
