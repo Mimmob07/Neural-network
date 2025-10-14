@@ -223,6 +223,7 @@ impl Network {
 
     pub fn test(&self, inputs_set: Vec<Vec<f32>>, expected_outputs_set: Vec<Vec<f32>>) -> usize {
         assert!(inputs_set.len() == expected_outputs_set.len());
+        let start_time = Instant::now();
         let mut passes = 0;
 
         for (i, (inputs, label)) in inputs_set.iter().zip(expected_outputs_set).enumerate() {
@@ -238,6 +239,8 @@ impl Network {
                 passes += 1;
             }
         }
+
+        println!("Took {}s to test network", start_time.elapsed().as_millis() as f64 / 1000.0);
 
         passes
     }

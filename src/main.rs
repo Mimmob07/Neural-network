@@ -27,7 +27,7 @@ fn main() -> io::Result<()> {
         })
         .collect();
 
-    let mut network = Network::new(vec![784, 30, 10], ActivationFunction::Sigmoid, 0.5);
+    let mut network = Network::new(vec![784, 30, 10], ActivationFunction::Sigmoid, 1.0);
     // network.stochastic_train(train_images, train_labels, 30, 10);
     network.train(train_images, train_labels, 100);
 
@@ -52,7 +52,7 @@ fn main() -> io::Result<()> {
         .collect();
     println!("Score: {}/10_000", network.test(test_images, test_labels));
 
-    network.save("mnist_100_epochs")?;
+    network.save("mnist_100_epochs_1.0")?;
 
     Ok(())
 }
