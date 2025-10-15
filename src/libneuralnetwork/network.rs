@@ -48,6 +48,19 @@ impl Network {
         }
     }
 
+    pub fn from_file<T: AsRef<str>>(filename: T) -> io::Result<Self> {
+        let start_time = Instant::now();
+        let buf = read(filename.as_ref())?;
+        let network = rmp_serde::from_slice(&buf).unwrap();
+
+        println!(
+            "Took {}s to load network",
+            start_time.elapsed().as_millis() as f64 / 1000.0
+        );
+
+        Ok(network)
+    }
+
     pub fn feed_forward(&self, inputs: Vec<f32>) -> Vec<f32> {
         assert!(
             inputs.len() == self.layers[0],
@@ -137,6 +150,7 @@ impl Network {
         epochs: u16,
     ) {
         let mut epoch_durations: Vec<u64> = Vec::new();
+
         for i in 1..=epochs {
             let start_time = Instant::now();
             if epochs <= 100 || i % 100 == 0 {
@@ -227,6 +241,7 @@ impl Network {
         let mut passes = 0;
 
         for (i, (inputs, label)) in inputs_set.iter().zip(expected_outputs_set).enumerate() {
+            // let results = Network::softmax(self.feed_forward(inputs.clone()));
             let results = self.feed_forward(inputs.clone());
             let clamped_results: Vec<f32> = results.iter().map(|val| val.round()).collect();
 
@@ -240,20 +255,17 @@ impl Network {
             }
         }
 
-        println!("Took {}s to test network", start_time.elapsed().as_millis() as f64 / 1000.0);
+        println!(
+            "Took {}s to test network",
+            start_time.elapsed().as_millis() as f64 / 1000.0
+        );
 
         passes
     }
 
     fn softmax(input_layer: Vec<f32>) -> Vec<f32> {
-        let mut probabilities: Vec<f32> = Vec::new();
         let sum: f32 = input_layer.iter().map(|x| E.powf(*x)).sum();
-
-        input_layer
-            .iter()
-            .for_each(|x| probabilities.push(E.powf(*x) / sum));
-
-        probabilities
+        input_layer.iter().map(|x| E.powf(*x) / sum).collect()
     }
 
     pub fn save<T: AsRef<str>>(&self, filename: T) -> io::Result<()> {
@@ -271,18 +283,5 @@ impl Network {
 
         file.write_all(&buf)?;
         Ok(())
-    }
-
-    pub fn from_file<T: AsRef<str>>(filename: T) -> io::Result<Self> {
-        let start_time = Instant::now();
-        let buf = read(filename.as_ref())?;
-        let network = rmp_serde::from_slice(&buf).unwrap();
-
-        println!(
-            "Took {}s to load network",
-            start_time.elapsed().as_millis() as f64 / 1000.0
-        );
-
-        Ok(network)
     }
 }
