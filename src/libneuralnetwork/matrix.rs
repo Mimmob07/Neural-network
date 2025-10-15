@@ -75,6 +75,28 @@ impl Matrix {
     }
 }
 
+impl From<&Vec<Vec<f32>>> for Matrix {
+    fn from(data: &Vec<Vec<f32>>) -> Self {
+        let flat_data = data.iter().flatten().copied().collect::<Vec<f32>>();
+
+        Self {
+            rows: data.len(),
+            cols: data[0].len(),
+            data: flat_data,
+        }
+    }
+}
+
+impl From<&Vec<f32>> for Matrix {
+    fn from(data: &Vec<f32>) -> Self {
+        Self {
+            rows: 1,
+            cols: data.len(),
+            data: data.to_vec(),
+        }
+    }
+}
+
 impl From<Vec<Vec<f32>>> for Matrix {
     fn from(data: Vec<Vec<f32>>) -> Self {
         let flat_data = data.iter().flatten().copied().collect::<Vec<f32>>();
