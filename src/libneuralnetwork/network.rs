@@ -70,7 +70,7 @@ impl Network {
         let mut activation = Matrix::from(inputs).transpose();
 
         for i in 0..self.layers.len() - 1 {
-            activation = ((self.weights[i].clone() * &activation) + &self.biases[i].clone())
+            activation = ((&self.weights[i] * &activation) + &self.biases[i])
                 .map(self.activation_function.get_function());
         }
 
@@ -87,7 +87,7 @@ impl Network {
         self.activation_history.push(current_activation.clone());
 
         for i in 0..self.layers.len() - 1 {
-            let z = (self.weights[i].clone() * &current_activation) + &self.biases[i];
+            let z = (&self.weights[i] * &current_activation) + &self.biases[i];
             self.z_history.push(z.clone());
 
             current_activation = z.map(self.activation_function.get_function());
@@ -113,47 +113,48 @@ impl Network {
         let mut nabla_w: Vec<Matrix> = vec![Matrix::zeros(0, 0); self.weights.len()];
         let mut nabla_b: Vec<Matrix> = vec![Matrix::zeros(0, 0); self.biases.len()];
 
-        let mut error = ((outputs_matrix - &expected_outputs_matrix) * 2.0).dot(
+        let mut error = ((&outputs_matrix - &expected_outputs_matrix) * 2.0).dot(
             &self.z_history[self.z_history.len() - 1]
                 .map(self.activation_function.get_derivative()),
         );
 
         let l = self.layers.len() - 2;
-        nabla_w[l] = error.clone() * &self.activation_history[l].transpose();
+        nabla_w[l] = &error * &self.activation_history[l].transpose();
         nabla_b[l] = error.clone();
 
         for l_rev in (0..l).rev() {
             error = (self.weights[l_rev + 1].transpose() * &error)
                 .dot(&self.z_history[l_rev].map(self.activation_function.get_derivative()));
 
-            nabla_w[l_rev] = error.clone() * &self.activation_history[l_rev].transpose();
+            nabla_w[l_rev] = &error * &self.activation_history[l_rev].transpose();
             nabla_b[l_rev] = error.clone();
         }
 
         (nabla_w, nabla_b)
     }
 
-    pub fn update_network(&mut self, nabla_w: Vec<Matrix>, nabla_b: Vec<Matrix>) {
+    pub fn update_network(&mut self, nabla_w: &[Matrix], nabla_b: &[Matrix]) {
         for i in 0..self.layers.len() - 1 {
-            let adjusted_nabla_w = nabla_w[i].clone() * self.learning_rate;
-            let adjusted_nabla_b = nabla_b[i].clone() * self.learning_rate;
+            let adjusted_nabla_w = &nabla_w[i] * self.learning_rate;
+            let adjusted_nabla_b = &nabla_b[i] * self.learning_rate;
 
-            self.weights[i] = self.weights[i].clone() - &adjusted_nabla_w;
-            self.biases[i] = self.biases[i].clone() - &adjusted_nabla_b;
+            self.weights[i] = &self.weights[i] - &adjusted_nabla_w;
+            self.biases[i] = &self.biases[i] - &adjusted_nabla_b;
         }
     }
 
     pub fn train(
         &mut self,
-        training_inputs: &Vec<Vec<f32>>,
-        training_outputs: &Vec<Vec<f32>>,
-        testing_inputs: &Vec<Vec<f32>>,
-        testing_outputs: &Vec<Vec<f32>>,
+        training_inputs: &[Vec<f32>],
+        training_outputs: &[Vec<f32>],
+        testing_inputs: &[Vec<f32>],
+        testing_outputs: &[Vec<f32>],
         epochs: u16,
     ) {
         let mut epoch_durations: Vec<u64> = Vec::new();
         let mut network_performances: Vec<usize> = Vec::new();
-        let mut verbose_test_output = File::create("testing_output_for_each_epoch.txt").unwrap();
+        let mut verbose_test_output =
+            File::create(format!("test_output_{epochs}_epochs.txt")).unwrap();
 
         for i in 1..=epochs {
             let start_time = Instant::now();
@@ -168,12 +169,16 @@ impl Network {
                 let train_outputs = self.feed_forward_and_record(&training_inputs[j]);
                 let (nabla_w, nabla_b) =
                     self.back_propogate(train_outputs, training_outputs[j].clone());
-                self.update_network(nabla_w, nabla_b);
+                self.update_network(&nabla_w, &nabla_b);
             }
 
             let elapsed_time = start_time.elapsed().as_secs();
             epoch_durations.push(elapsed_time);
-            network_performances.push(self.test(&testing_inputs, &testing_outputs, &mut verbose_test_output));
+            network_performances.push(self.test(
+                testing_inputs,
+                testing_outputs,
+                &mut verbose_test_output,
+            ));
 
             if epochs <= 100 || i % 100 == 0 {
                 println!("Epoch {i} took {elapsed_time}s");
@@ -241,27 +246,39 @@ impl Network {
         }
     }
 
-    pub fn test<W: Write>(&self, inputs_set: &Vec<Vec<f32>>, expected_outputs_set: &Vec<Vec<f32>>, output: &mut W) -> usize {
+    pub fn test<W: Write>(
+        &self,
+        inputs_set: &[Vec<f32>],
+        expected_outputs_set: &[Vec<f32>],
+        output: &mut W,
+    ) -> usize {
         assert!(inputs_set.len() == expected_outputs_set.len());
         let start_time = Instant::now();
         let mut passes = 0;
 
         for (i, (inputs, label)) in inputs_set.iter().zip(expected_outputs_set).enumerate() {
             // let results = Network::softmax(self.feed_forward(inputs.clone()));
-            let results = self.feed_forward(&inputs);
+            let results = self.feed_forward(inputs);
             let clamped_results: Vec<f32> = results.iter().map(|val| val.round()).collect();
 
-            output.write(format!("Test {} of {}", i, inputs_set.len()).as_bytes()).unwrap();
-            output.write(format!("Results : {results:?}").as_bytes()).unwrap();
-            output.write(format!("Clamped : {clamped_results:?}").as_bytes()).unwrap();
-            output.write(format!("Expected: {label:?}").as_bytes()).unwrap();
+            output
+                .write_all(format!("Test {} of {}\n", i, inputs_set.len()).as_bytes())
+                .unwrap();
+            output
+                .write_all(format!("Results : {results:?}\n").as_bytes())
+                .unwrap();
+            output
+                .write_all(format!("Clamped : {clamped_results:?}\n").as_bytes())
+                .unwrap();
+            output
+                .write_all(format!("Expected: {label:?}\n").as_bytes())
+                .unwrap();
 
             if clamped_results == *label {
                 passes += 1;
             }
         }
 
-        output.flush().unwrap();
         println!(
             "Took {}s to test network",
             start_time.elapsed().as_millis() as f64 / 1000.0

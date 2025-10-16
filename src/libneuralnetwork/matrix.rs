@@ -120,109 +120,156 @@ impl From<Vec<f32>> for Matrix {
 }
 
 // Matrix addition
+fn matrix_add(lhs: &Matrix, rhs: &Matrix) -> Matrix {
+    assert!(
+        lhs.rows == rhs.rows && lhs.cols == rhs.cols,
+        "Attempt to add matrix of size {}x{} with matrix of size {}x{}",
+        lhs.rows,
+        lhs.cols,
+        rhs.rows,
+        rhs.cols
+    );
+
+    let mut sum: Matrix = Matrix::zeros(lhs.rows, lhs.cols);
+
+    for i in 0..lhs.rows {
+        for j in 0..lhs.cols {
+            sum.data[i * lhs.cols + j] = lhs.data[i * lhs.cols + j] + rhs.data[i * lhs.cols + j];
+        }
+    }
+
+    sum
+}
+
 impl Add<&Matrix> for Matrix {
     type Output = Self;
 
     fn add(self, rhs: &Matrix) -> Self::Output {
-        assert!(
-            self.rows == rhs.rows && self.cols == rhs.cols,
-            "Attempt to add matrix of size {}x{} with matrix of size {}x{}",
-            self.rows,
-            self.cols,
-            rhs.rows,
-            rhs.cols
-        );
+        matrix_add(&self, rhs)
+    }
+}
 
-        let mut sum: Matrix = Matrix::zeros(self.rows, self.cols);
+impl Add<&Matrix> for &Matrix {
+    type Output = Matrix;
 
-        for i in 0..self.rows {
-            for j in 0..self.cols {
-                sum.data[i * self.cols + j] =
-                    self.data[i * self.cols + j] + rhs.data[i * self.cols + j];
-            }
-        }
-
-        sum
+    fn add(self, rhs: &Matrix) -> Self::Output {
+        matrix_add(self, rhs)
     }
 }
 
 // Matrix subtraction
+fn matrix_subtract(lhs: &Matrix, rhs: &Matrix) -> Matrix {
+    assert!(
+        lhs.rows == rhs.rows && lhs.cols == rhs.cols,
+        "Attempt to subtract matrix of size {}x{} with matrix of size {}x{}",
+        lhs.rows,
+        lhs.cols,
+        rhs.rows,
+        rhs.cols
+    );
+
+    let mut difference: Matrix = Matrix::zeros(lhs.rows, lhs.cols);
+
+    for i in 0..lhs.rows {
+        for j in 0..lhs.cols {
+            difference.data[i * lhs.cols + j] =
+                lhs.data[i * lhs.cols + j] - rhs.data[i * lhs.cols + j];
+        }
+    }
+
+    difference
+}
+
 impl Sub<&Matrix> for Matrix {
     type Output = Self;
 
     fn sub(self, rhs: &Matrix) -> Self::Output {
-        assert!(
-            self.rows == rhs.rows && self.cols == rhs.cols,
-            "Attempt to subtract matrix of size {}x{} with matrix of size {}x{}",
-            self.rows,
-            self.cols,
-            rhs.rows,
-            rhs.cols
-        );
+        matrix_subtract(&self, rhs)
+    }
+}
 
-        let mut difference: Matrix = Matrix::zeros(self.rows, self.cols);
+impl Sub<&Matrix> for &Matrix {
+    type Output = Matrix;
 
-        for i in 0..self.rows {
-            for j in 0..self.cols {
-                difference.data[i * self.cols + j] =
-                    self.data[i * self.cols + j] - rhs.data[i * self.cols + j];
-            }
-        }
-
-        difference
+    fn sub(self, rhs: &Matrix) -> Self::Output {
+        matrix_subtract(self, rhs)
     }
 }
 
 // Matrix multiplication
+fn matrix_multiply(lhs: &Matrix, rhs: &Matrix) -> Matrix {
+    assert!(
+        lhs.cols == rhs.rows,
+        "Attempt to multiply matrix of size {}x{} with matrix of size {}x{}",
+        lhs.rows,
+        lhs.cols,
+        rhs.rows,
+        rhs.cols
+    );
+
+    let mut product: Matrix = Matrix::zeros(lhs.rows, rhs.cols);
+
+    product
+        .data
+        .par_chunks_mut(rhs.cols)
+        .enumerate()
+        .for_each(|(i, row)| {
+            for (j, val) in row.iter_mut().enumerate() {
+                let mut sum: f32 = 0.0;
+
+                for k in 0..lhs.cols {
+                    sum += lhs.data[i * lhs.cols + k] * rhs.data[k * rhs.cols + j];
+                }
+
+                *val = sum;
+            }
+        });
+
+    product
+}
+
 impl Mul<&Matrix> for Matrix {
     type Output = Self;
 
     fn mul(self, rhs: &Matrix) -> Self::Output {
-        assert!(
-            self.cols == rhs.rows,
-            "Attempt to multiply matrix of size {}x{} with matrix of size {}x{}",
-            self.rows,
-            self.cols,
-            rhs.rows,
-            rhs.cols
-        );
+        matrix_multiply(&self, rhs)
+    }
+}
 
-        let mut product: Matrix = Matrix::zeros(self.rows, rhs.cols);
+impl Mul<&Matrix> for &Matrix {
+    type Output = Matrix;
 
-        product
-            .data
-            .par_chunks_mut(rhs.cols)
-            .enumerate()
-            .for_each(|(i, row)| {
-                for (j, val) in row.iter_mut().enumerate() {
-                    let mut sum: f32 = 0.0;
-
-                    for k in 0..self.cols {
-                        sum += self.data[i * self.cols + k] * rhs.data[k * rhs.cols + j];
-                    }
-
-                    *val = sum;
-                }
-            });
-
-        product
+    fn mul(self, rhs: &Matrix) -> Self::Output {
+        matrix_multiply(self, rhs)
     }
 }
 
 // Scalar multiplication
+fn matrix_scalar_multiplication(lhs: &Matrix, rhs: f32) -> Matrix {
+    let mut product: Matrix = Matrix::zeros(lhs.rows, lhs.cols);
+
+    for i in 0..lhs.rows {
+        for j in 0..lhs.cols {
+            product.data[i * lhs.cols + j] = rhs * lhs.data[i * lhs.cols + j];
+        }
+    }
+
+    product
+}
+
 impl Mul<f32> for Matrix {
     type Output = Self;
 
     fn mul(self, rhs: f32) -> Self::Output {
-        let mut product: Matrix = Matrix::zeros(self.rows, self.cols);
+        matrix_scalar_multiplication(&self, rhs)
+    }
+}
 
-        for i in 0..self.rows {
-            for j in 0..self.cols {
-                product.data[i * self.cols + j] = rhs * self.data[i * self.cols + j];
-            }
-        }
+impl Mul<f32> for &Matrix {
+    type Output = Matrix;
 
-        product
+    fn mul(self, rhs: f32) -> Self::Output {
+        matrix_scalar_multiplication(&self, rhs)
     }
 }
 
