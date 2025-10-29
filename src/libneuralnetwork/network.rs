@@ -174,15 +174,17 @@ impl Network {
 
             let elapsed_time = start_time.elapsed().as_secs();
             epoch_durations.push(elapsed_time);
+
+            if epochs <= 100 || i % 100 == 0 {
+                println!("Epoch {i} took {elapsed_time}s");
+            }
+
             network_performances.push(self.test(
                 testing_inputs,
                 testing_outputs,
                 &mut verbose_test_output,
             ));
-
-            if epochs <= 100 || i % 100 == 0 {
-                println!("Epoch {i} took {elapsed_time}s");
-            }
+            println!("Performance: {}/10_000", network_performances.last().unwrap());
         }
 
         println!(

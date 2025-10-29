@@ -11,13 +11,18 @@ fn main() -> io::Result<()> {
         "mnist/train-images.idx3-ubyte",
         "mnist/train-labels.idx1-ubyte",
     )?;
+    let test_data: MnistImages = unpack(
+        "mnist/t10k-images.idx3-ubyte",
+        "mnist/t10k-labels.idx1-ubyte",
+    )?;
 
-    let train_images = train_data
+
+    let train_images: Vec<Vec<f32>> = train_data
         .images
         .iter()
         .map(|vec| vec.iter().map(|val| *val as f32).collect())
         .collect();
-    let train_labels = train_data
+    let train_labels: Vec<Vec<f32>> = train_data
         .labels
         .iter()
         .map(|val| {
@@ -26,16 +31,6 @@ fn main() -> io::Result<()> {
             tmp
         })
         .collect();
-
-    let mut network = Network::new(vec![784, 30, 10], ActivationFunction::Sigmoid, 1.0);
-    // network.stochastic_train(train_images, train_labels, 30, 10);
-    network.train(train_images, train_labels, 100);
-
-    let test_data: MnistImages = unpack(
-        "mnist/t10k-images.idx3-ubyte",
-        "mnist/t10k-labels.idx1-ubyte",
-    )?;
-
     let test_images: Vec<Vec<f32>> = test_data
         .images
         .iter()
@@ -50,7 +45,12 @@ fn main() -> io::Result<()> {
             tmp
         })
         .collect();
-    println!("Score: {}/10_000", network.test(test_images, test_labels));
+
+    let mut network = Network::new(vec![784, 30, 10], ActivationFunction::Sigmoid, 1.0);
+    // network.stochastic_train(train_images, train_labels, 30, 10);
+    network.train(&train_images, &train_labels, &test_images, &test_labels, 100);
+
+    println!("Score: {}/10_000", network.test(&test_images, &test_labels, &mut io::stdout()));
 
     network.save("mnist_100_epochs_1.0")?;
 
